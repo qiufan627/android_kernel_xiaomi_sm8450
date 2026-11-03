@@ -1,8 +1,5 @@
 name: make-marble-defconfig
 
-# 用途：把 LineageOS 的 gki_defconfig + 4 个 vendor 片段合并成单个 marble_defconfig，
-# 并提交回你的 fork。跑一次即可，之后 KernelSU_Action 里填 KERNEL_CONFIG=marble_defconfig。
-
 on:
   workflow_dispatch:
 
