@@ -1,5 +1,4 @@
 name: make-marble-defconfig
-
 on:
   workflow_dispatch:
 
