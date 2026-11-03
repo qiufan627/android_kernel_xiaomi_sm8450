@@ -1,0 +1,54 @@
+name: make-marble-defconfig
+
+# 用途：把 LineageOS 的 gki_defconfig + 4 个 vendor 片段合并成单个 marble_defconfig，
+# 并提交回你的 fork。跑一次即可，之后 KernelSU_Action 里填 KERNEL_CONFIG=marble_defconfig。
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev python3 kmod cpio
+
+      - name: Merge defconfig fragments
+        run: |
+          set -e
+          make ARCH=arm64 O=out gki_defconfig
+          scripts/kconfig/merge_config.sh -m -O out out/.config \
+            arch/arm64/configs/vendor/waipio_GKI.config \
+            arch/arm64/configs/vendor/xiaomi_GKI.config \
+            arch/arm64/configs/vendor/marble_GKI.config \
+            arch/arm64/configs/vendor/debugfs.config
+          make ARCH=arm64 O=out olddefconfig
+          make ARCH=arm64 O=out savedefconfig
+          cp out/defconfig arch/arm64/configs/marble_defconfig
+          echo "---- sanity check ----"
+          grep -E 'CONFIG_ARM64=y|CONFIG_LOCALVERSION' arch/arm64/configs/marble_defconfig | head
+          wc -l arch/arm64/configs/marble_defconfig
+
+      - name: Commit and push
+        run: |
+          set -e
+          git config user.name  "defconfig-bot"
+          git config user.email "defconfig-bot@users.noreply.github.com"
+          git add arch/arm64/configs/marble_defconfig
+          if git diff --cached --quiet; then
+            echo "no change"
+          else
+            git commit -m "arm64: configs: add merged marble_defconfig"
+            git push
+          fi
